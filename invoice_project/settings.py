@@ -86,3 +86,6 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # En développement, les emails s'affichent dans le terminal
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# settings.py
+EMAIL_SUBJECT_PREFIX = "[FactureAI] "
+DEFAULT_FROM_EMAIL = "FactureAI <noreply@factureai.pro>"
