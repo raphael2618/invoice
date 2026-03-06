@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
 from django.http import HttpResponse
 from .models import Invoice
 from .services import extract_invoice_data
@@ -7,6 +9,18 @@ from django.db.models import Sum
 from django.db.models.functions import TruncMonth
 import json
 import pandas as pd
+
+# --- NOUVELLE VUE : INSCRIPTION ---
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user) # Connecte l'utilisateur direct après inscription
+            return redirect('upload_invoice')
+    else:
+        form = UserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
 
 @login_required
 def upload_invoice(request):
@@ -41,7 +55,6 @@ def upload_invoice(request):
 
 @login_required
 def delete_invoice(request, invoice_id):
-    """Supprime une facture spécifique"""
     invoice = get_object_or_404(Invoice, id=invoice_id, user=request.user)
     invoice.delete()
     return redirect('upload_invoice')

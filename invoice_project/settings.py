@@ -83,3 +83,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Redirection après Login/Logout
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# En développement, les emails s'affichent dans le terminal
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

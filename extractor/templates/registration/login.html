@@ -36,6 +36,21 @@
             Identifiants incorrects. Veuillez réessayer.
         </div>
         {% endif %}
+
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+            <p class="text-sm text-slate-500">
+                Pas encore de compte ? 
+                <a href="{% url 'register' %}" class="text-blue-600 font-bold hover:underline">
+                    Inscrivez-vous gratuitement
+                </a>
+            </p>
+        </div>
+
+        <div class="mt-2 text-center">
+            <a href="{% url 'password_reset' %}" class="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                Mot de passe oublié ?
+            </a>
+        </div>
     </div>
 </body>
 </html>
