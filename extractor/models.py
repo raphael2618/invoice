@@ -2,9 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 class Invoice(models.Model):
-    # Le lien magique : chaque facture appartient à UN utilisateur
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="invoices")
-    
     supplier = models.CharField(max_length=255)
     date = models.DateField()
     total_ttc = models.DecimalField(max_digits=10, decimal_places=2)

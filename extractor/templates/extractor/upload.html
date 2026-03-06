@@ -2,29 +2,71 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>FactureAI Pro</title>
+    <title>FactureAI Pro - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
 </head>
-<body class="bg-slate-50 min-h-screen">
-    <div class="max-w-5xl mx-auto py-12 px-4">
-        <h1 class="text-3xl font-bold text-slate-800 mb-8">Dashboard Factures</h1>
-
-        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
-            <form action="/upload/" class="dropzone border-4 border-dashed border-blue-200 rounded-xl bg-slate-50 hover:bg-blue-50 transition-all" id="invoice-dropzone">
-                {% csrf_token %}
-                <div class="dz-message py-10">
-                    <span class="text-lg font-medium text-slate-600">Déposez vos factures ici (PDF, JPG, PNG)</span>
-                </div>
-            </form>
-            <div id="loader" class="hidden mt-4 text-center text-blue-600 font-bold animate-pulse">
-                ⚙️ Extraction Gemini 1.5 Flash en cours...
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">FactureAI Dashboard</h1>
+                <p class="text-slate-500">Gérez vos finances avec l'IA</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'export_excel' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-100">
+                    📊 Export Excel
+                </a>
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="text-slate-400 hover:text-red-600 font-medium">Déconnexion</button>
+                </form>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
+                <p class="text-sm font-medium text-slate-500 uppercase">Dépenses ce mois</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_month|floatformat:2 }} €</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
+                <p class="text-sm font-medium text-slate-500 uppercase">TVA Récupérable</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ tva_month|floatformat:2 }} €</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
+                <p class="text-sm font-medium text-slate-500 uppercase">Factures traitées</p>
+                <p class="text-2xl font-bold text-slate-800 mt-1">{{ count_month }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-700 mb-4 text-center">Évolution des dépenses</h3>
+                <canvas id="monthlyChart" height="200"></canvas>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-slate-700 mb-4 text-center">Répartition par Fournisseur</h3>
+                <canvas id="supplierChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+            <form action="/" class="dropzone border-4 border-dashed border-blue-100 rounded-xl bg-slate-50 hover:bg-blue-50 transition-all" id="invoice-dropzone">
+                {% csrf_token %}
+                <div class="dz-message py-6">
+                    <span class="text-lg font-medium text-slate-600 block">Glissez vos factures ici</span>
+                </div>
+            </form>
+            <div id="loader" class="hidden mt-6 text-center text-blue-600 font-bold animate-pulse">
+                ⚙️ IA Gemini en cours d'analyse...
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
             <table class="w-full text-left">
-                <thead class="bg-slate-100 text-slate-600 text-xs uppercase font-bold">
+                <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-bold border-b border-slate-100">
                     <tr>
                         <th class="p-4">Fournisseur</th>
                         <th class="p-4">Date</th>
@@ -33,15 +75,15 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
-                    {% for f in factures %}
+                    {% for f in invoices %}
                     <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 font-semibold text-slate-800">{{ f.fournisseur }}</td>
-                        <td class="p-4 text-slate-500">{{ f.date_facture|date:"d/m/Y" }}</td>
-                        <td class="p-4 text-red-500">{{ f.tva }} {{ f.devise }}</td>
-                        <td class="p-4 font-bold text-slate-900">{{ f.total_ttc }} {{ f.devise }}</td>
+                        <td class="p-4 font-semibold text-slate-800">{{ f.supplier }}</td>
+                        <td class="p-4 text-slate-500">{{ f.date|date:"d/m/Y" }}</td>
+                        <td class="p-4 text-rose-500">{{ f.tva }} {{ f.currency }}</td>
+                        <td class="p-4 font-bold text-slate-900">{{ f.total_ttc }} {{ f.currency }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="p-10 text-center text-slate-400 italic">Aucune donnée trouvée. Importez votre première facture !</td></tr>
+                    <tr><td colspan="4" class="p-10 text-center text-slate-400 italic">Aucune donnée trouvée.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -50,25 +92,41 @@
 
     <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
     <script>
-        // Configuration Dropzone
         Dropzone.options.invoiceDropzone = {
             paramName: "file",
             maxFilesize: 10,
-            timeout: 120000, // On laisse 2 minutes à l'IA pour répondre
+            timeout: 120000,
             init: function() {
-                this.on("sending", function() { 
-                    document.getElementById('loader').classList.remove('hidden'); 
-                });
-                this.on("success", function() { 
-                    // Petit délai pour laisser SQLite respirer avant de recharger
-                    setTimeout(function() { window.location.reload(); }, 500); 
-                });
-                this.on("error", function(file, message) {
-                    alert("Erreur lors de l'upload : " + message);
-                    document.getElementById('loader').classList.add('hidden');
-                });
+                this.on("sending", function() { document.getElementById('loader').classList.remove('hidden'); });
+                this.on("success", function() { setTimeout(function() { window.location.reload(); }, 600); });
             }
         };
+
+        new Chart(document.getElementById('monthlyChart'), {
+            type: 'line',
+            data: {
+                labels: {{ monthly_labels|safe }},
+                datasets: [{
+                    label: 'Total (€)',
+                    data: {{ monthly_totals|safe }},
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            }
+        });
+
+        new Chart(document.getElementById('supplierChart'), {
+            type: 'doughnut',
+            data: {
+                labels: {{ supplier_labels|safe }},
+                datasets: [{
+                    data: {{ supplier_totals|safe }},
+                    backgroundColor: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']
+                }]
+            }
+        });
     </script>
 </body>
 </html>
