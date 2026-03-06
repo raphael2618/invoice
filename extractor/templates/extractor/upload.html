@@ -56,12 +56,11 @@
             <form action="/" class="dropzone border-4 border-dashed border-blue-100 rounded-xl bg-slate-50 hover:bg-blue-50 transition-all" id="invoice-dropzone">
                 {% csrf_token %}
                 <div class="dz-message py-6">
-                    <span class="text-lg font-medium text-slate-600 block text-center">Glissez vos factures ici (PDF, JPG, PNG)</span>
-                    <span class="text-sm text-slate-400 block text-center mt-2">Analyse automatique par Gemini 2.5 Flash</span>
+                    <span class="text-lg font-medium text-slate-600 block text-center">Glissez vos factures ici</span>
                 </div>
             </form>
             <div id="loader" class="hidden mt-6 text-center text-blue-600 font-bold animate-pulse flex items-center justify-center gap-2">
-                <span class="inline-block animate-spin text-xl">⚙️</span> IA Gemini en cours d'analyse...
+                ⚙️ Extraction IA en cours...
             </div>
         </div>
 
@@ -73,6 +72,7 @@
                         <th class="p-4">Date</th>
                         <th class="p-4">TVA</th>
                         <th class="p-4">Total TTC</th>
+                        <th class="p-4 text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -82,9 +82,14 @@
                         <td class="p-4 text-slate-500">{{ f.date|date:"d/m/Y" }}</td>
                         <td class="p-4 text-rose-500">{{ f.tva }} {{ f.currency }}</td>
                         <td class="p-4 font-bold text-slate-900">{{ f.total_ttc }} {{ f.currency }}</td>
+                        <td class="p-4 text-center">
+                            <a href="{% url 'delete_invoice' f.id %}" onclick="return confirm('Supprimer cette facture ?')" class="text-rose-400 hover:text-rose-600 transition-colors">
+                                🗑️
+                            </a>
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="4" class="p-10 text-center text-slate-400 italic">Aucune donnée trouvée. Importez votre première facture !</td></tr>
+                    <tr><td colspan="5" class="p-10 text-center text-slate-400 italic">Aucune donnée trouvée.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
@@ -93,27 +98,16 @@
 
     <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
     <script>
-        // Configuration Dropzone
         Dropzone.options.invoiceDropzone = {
             paramName: "file",
             maxFilesize: 10,
             timeout: 120000,
             init: function() {
-                this.on("sending", function() { 
-                    document.getElementById('loader').classList.remove('hidden'); 
-                });
-                this.on("success", function() { 
-                    setTimeout(function() { window.location.reload(); }, 600); 
-                });
-                this.on("error", function(file, message) {
-                    console.error(message);
-                    alert("Erreur lors de l'envoi : Vérifiez l'URL de votre formulaire.");
-                    document.getElementById('loader').classList.add('hidden');
-                });
+                this.on("sending", function() { document.getElementById('loader').classList.remove('hidden'); });
+                this.on("success", function() { setTimeout(function() { window.location.reload(); }, 600); });
             }
         };
 
-        // Graphique Évolution
         new Chart(document.getElementById('monthlyChart'), {
             type: 'line',
             data: {
@@ -126,11 +120,9 @@
                     fill: true,
                     tension: 0.4
                 }]
-            },
-            options: { plugins: { legend: { display: false } } }
+            }
         });
 
-        // Graphique Fournisseurs
         new Chart(document.getElementById('supplierChart'), {
             type: 'doughnut',
             data: {
