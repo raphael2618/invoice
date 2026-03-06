@@ -87,5 +87,22 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 # En développement, les emails s'affichent dans le terminal
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # settings.py
-EMAIL_SUBJECT_PREFIX = "[FactureAI] "
+EMAIL_SUBJECT_PREFIX = ""
 DEFAULT_FROM_EMAIL = "FactureAI <noreply@factureai.pro>"
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        # C'est cette ligne qui dit à Django : "Regarde d'abord dans mon dossier global"
+        'DIRS': [BASE_DIR / 'templates'], 
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
