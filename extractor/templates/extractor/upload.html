@@ -1,138 +1,98 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>FactureAI Pro - Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
-</head>
-<body class="bg-slate-50 min-h-screen p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
-        
-        <div class="flex flex-col md:flex-row justify-between items-center mb-10 gap-4">
-            <div>
-                <h1 class="text-3xl font-bold text-slate-800 tracking-tight">Dashboard FactureAI</h1>
-                <p class="text-slate-500">Bienvenue, {{ user.username }}</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <a href="{% url 'export_excel' %}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
-                    📊 Export Excel
-                </a>
-                <form action="{% url 'logout' %}" method="post" class="inline">
-                    {% csrf_token %}
-                    <button type="submit" class="text-slate-400 hover:text-red-600 font-medium transition-colors">Déconnexion</button>
-                </form>
-            </div>
-        </div>
+{% extends "base.html" %}
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-blue-500">
-                <p class="text-sm font-medium text-slate-500 uppercase">Dépenses ce mois</p>
-                <p class="text-2xl font-bold text-slate-800 mt-1">{{ total_month|floatformat:2 }} €</p>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-rose-500">
-                <p class="text-sm font-medium text-slate-500 uppercase">TVA Récupérable</p>
-                <p class="text-2xl font-bold text-slate-800 mt-1">{{ tva_month|floatformat:2 }} €</p>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 border-l-4 border-l-emerald-500">
-                <p class="text-sm font-medium text-slate-500 uppercase">Factures traitées</p>
-                <p class="text-2xl font-bold text-slate-800 mt-1">{{ count_month }}</p>
-            </div>
-        </div>
+{% block content %}
+<div x-data="{ 
+    loading: false,
+    filterSearch: '',
+    editingId: null,
+    editingField: null,
+    filterRow(supplier) { return supplier.toLowerCase().includes(this.filterSearch.toLowerCase()); },
+    async saveField(id, field, value) {
+        const response = await fetch('{% url 'update_invoice_field' %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, field: field, value: value })
+        });
+        if (response.ok) { this.editingId = null; this.editingField = null; location.reload(); }
+    }
+}" class="max-w-6xl mx-auto space-y-8">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="font-bold text-slate-700 mb-4 text-center">Évolution des dépenses</h3>
-                <canvas id="monthlyChart" height="180"></canvas>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <h3 class="font-bold text-slate-700 mb-4 text-center">Répartition par Fournisseur</h3>
-                <canvas id="supplierChart" height="180"></canvas>
-            </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
+            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl font-bold">€</div>
+            <div><p class="text-xs font-bold text-gray-400 uppercase">Total Mensuel</p><p class="text-2xl font-black">{{ total_month|floatformat:2 }} €</p></div>
         </div>
-
-        <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
-            <form action="/" class="dropzone border-4 border-dashed border-blue-100 rounded-xl bg-slate-50 hover:bg-blue-50 transition-all" id="invoice-dropzone">
-                {% csrf_token %}
-                <div class="dz-message py-6">
-                    <span class="text-lg font-medium text-slate-600 block text-center">Glissez vos factures ici</span>
-                </div>
-            </form>
-            <div id="loader" class="hidden mt-6 text-center text-blue-600 font-bold animate-pulse flex items-center justify-center gap-2">
-                ⚙️ Extraction IA en cours...
-            </div>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
+            <div class="p-3 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-xl font-bold">%</div>
+            <div><p class="text-xs font-bold text-gray-400 uppercase">TVA à récupérer</p><p class="text-2xl font-black">{{ tva_month|floatformat:2 }} €</p></div>
         </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <table class="w-full text-left">
-                <thead class="bg-slate-50 text-slate-600 text-xs uppercase font-bold border-b border-slate-100">
-                    <tr>
-                        <th class="p-4">Fournisseur</th>
-                        <th class="p-4">Date</th>
-                        <th class="p-4">TVA</th>
-                        <th class="p-4">Total TTC</th>
-                        <th class="p-4 text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-                    {% for f in invoices %}
-                    <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 font-semibold text-slate-800">{{ f.supplier }}</td>
-                        <td class="p-4 text-slate-500">{{ f.date|date:"d/m/Y" }}</td>
-                        <td class="p-4 text-rose-500">{{ f.tva }} {{ f.currency }}</td>
-                        <td class="p-4 font-bold text-slate-900">{{ f.total_ttc }} {{ f.currency }}</td>
-                        <td class="p-4 text-center">
-                            <a href="{% url 'delete_invoice' f.id %}" onclick="return confirm('Supprimer cette facture ?')" class="text-rose-400 hover:text-rose-600 transition-colors">
-                                🗑️
-                            </a>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="p-10 text-center text-slate-400 italic">Aucune donnée trouvée.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
+            <div class="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-xl font-bold">#</div>
+            <div><p class="text-xs font-bold text-gray-400 uppercase">Documents</p><p class="text-2xl font-black">{{ count_month }}</p></div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
-    <script>
-        Dropzone.options.invoiceDropzone = {
-            paramName: "file",
-            maxFilesize: 10,
-            timeout: 120000,
-            init: function() {
-                this.on("sending", function() { document.getElementById('loader').classList.remove('hidden'); });
-                this.on("success", function() { setTimeout(function() { window.location.reload(); }, 600); });
-            }
-        };
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700">
+            <input type="text" x-model="filterSearch" placeholder="Rechercher un fournisseur..." class="w-full p-3 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-xl outline-none">
+        </div>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700">
+            <form action="{% url 'upload_invoice' %}" method="POST" enctype="multipart/form-data" @submit="loading = true" class="flex gap-2">
+                {% csrf_token %}
+                <input type="file" name="pdf_file" required class="flex-1 text-xs">
+                <button type="submit" :disabled="loading" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">
+                    <span x-show="!loading">Analyser</span>
+                    <span x-show="loading" class="animate-pulse">Analyse...</span>
+                </button>
+            </form>
+        </div>
+    </div>
 
-        new Chart(document.getElementById('monthlyChart'), {
-            type: 'line',
-            data: {
-                labels: {{ monthly_labels|safe }},
-                datasets: [{
-                    label: 'Dépenses (€)',
-                    data: {{ monthly_totals|safe }},
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    fill: true,
-                    tension: 0.4
-                }]
-            }
-        });
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 h-64"><canvas id="monthlyChart"></canvas></div>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 h-64"><canvas id="supplierChart"></canvas></div>
+    </div>
 
-        new Chart(document.getElementById('supplierChart'), {
-            type: 'doughnut',
-            data: {
-                labels: {{ supplier_labels|safe }},
-                datasets: [{
-                    data: {{ supplier_totals|safe }},
-                    backgroundColor: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']
-                }]
-            }
-        });
-    </script>
-</body>
-</html>
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border dark:border-slate-700 overflow-hidden">
+        <div class="p-4 bg-gray-50 dark:bg-slate-900/50 border-b dark:border-slate-700 flex justify-between items-center">
+            <h3 class="text-xs font-bold uppercase text-gray-400 tracking-widest text-blue-600">Liste des factures</h3>
+            <form action="{% url 'export_excel' %}" method="GET" class="flex gap-2">
+                <input type="date" name="start_date" class="text-[10px] p-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded">
+                <input type="date" name="end_date" class="text-[10px] p-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded">
+                <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold">EXPORTER</button>
+            </form>
+        </div>
+        <table class="w-full text-left">
+            <thead class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 text-[10px] uppercase font-bold">
+                <tr><th class="p-4">Fournisseur</th><th class="p-4">Date</th><th class="p-4 text-right">Montant</th><th class="p-4 text-center">Action</th></tr>
+            </thead>
+            <tbody class="divide-y dark:divide-slate-700">
+                {% for invoice in invoices %}
+                <tr x-show="filterRow('{{ invoice.supplier|escapejs }}')" class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition group">
+                    <td class="p-4">
+                        <div @dblclick="editingId = {{ invoice.id }}; editingField = 'supplier'">
+                            <span x-show="editingId !== {{ invoice.id }} || editingField !== 'supplier'" class="font-bold">{{ invoice.supplier }}</span>
+                            <input x-show="editingId === {{ invoice.id }} && editingField === 'supplier'" type="text" value="{{ invoice.supplier }}" @keyup.enter="saveField({{ invoice.id }}, 'supplier', $event.target.value)" class="bg-white dark:bg-slate-900 border border-blue-500 rounded px-2 py-1 text-sm w-full outline-none">
+                        </div>
+                    </td>
+                    <td class="p-4 text-sm opacity-60">{{ invoice.date|date:"d/m/Y" }}</td>
+                    <td class="p-4 text-right font-mono font-bold text-blue-600">{{ invoice.total_ttc }} {{ invoice.currency }}</td>
+                    <td class="p-4 flex justify-center gap-2">
+                        <a href="{{ invoice.pdf_file.url }}" target="_blank" class="p-1 hover:text-blue-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
+                        <a href="{% url 'delete_invoice' invoice.id %}" class="p-1 hover:text-red-500 transition opacity-0 group-hover:opacity-100" onclick="return confirm('Supprimer ?')"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, { type: 'line', data: { labels: {{ monthly_labels|safe }}, datasets: [{ label: 'Dépenses', data: {{ monthly_totals|safe }}, borderColor: '#2563eb', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
+    const supplierCtx = document.getElementById('supplierChart').getContext('2d');
+    new Chart(supplierCtx, { type: 'doughnut', data: { labels: {{ supplier_labels|safe }}, datasets: [{ data: {{ supplier_totals|safe }}, backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }] }, options: { responsive: true, maintainAspectRatio: false } });
+</script>
+{% endblock %}

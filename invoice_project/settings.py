@@ -35,10 +35,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'invoice_project.urls'
 
+# CONFIGURATION DES TEMPLATES (Fusionnée et propre)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        # On dit à Django de regarder d'abord dans le dossier global 'templates' à la racine
+        'DIRS': [BASE_DIR / 'templates'], 
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -84,25 +86,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# CONFIGURATION DES EMAILS
 # En développement, les emails s'affichent dans le terminal
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-# settings.py
 EMAIL_SUBJECT_PREFIX = ""
 DEFAULT_FROM_EMAIL = "FactureAI <noreply@factureai.pro>"
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # C'est cette ligne qui dit à Django : "Regarde d'abord dans mon dossier global"
-        'DIRS': [BASE_DIR / 'templates'], 
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
