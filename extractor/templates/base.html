@@ -3,72 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice AI Pro</title>
+    <title>InvoicePro AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        slate: { 800: '#1e293b', 900: '#0f172a' }
-                    }
+                    fontFamily: { sans: ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: { slate: { 800: '#1e293b', 900: '#0f172a' } }
                 }
             }
         }
     </script>
+    <style> [x-cloak] { display: none !important; } </style>
 </head>
-<body class="bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 transition-colors duration-300 min-h-screen font-sans">
 
-    <div x-data="{ 
-            notifications: [],
-            add(e) {
-                this.notifications.push({
-                    id: Date.now(),
-                    type: e.detail.type,
-                    content: e.detail.content,
-                })
-            },
-            remove(id) {
-                this.notifications = this.notifications.filter(n => n.id !== id)
-            }
-         }"
-         @notify.window="add($event)"
-         class="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
-        <template x-for="n in notifications" :key="n.id">
-            <div x-init="setTimeout(() => remove(n.id), 5000)"
-                 :class="{
-                    'bg-green-600': n.type === 'success',
-                    'bg-red-600': n.type === 'error',
-                    'bg-blue-600': n.type === 'info'
-                 }"
-                 class="text-white px-6 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] transition-all transform animate-bounce-short">
-                <span x-text="n.content"></span>
-                <button @click="remove(n.id)" class="ml-4 font-bold">&times;</button>
-            </div>
-        </template>
+    <div class="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)"
+                     class="{% if message.tags == 'success' %}bg-emerald-600{% elif message.tags == 'error' %}bg-red-600{% else %}bg-blue-600{% endif %} text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center justify-between min-w-[320px] animate-bounce-short font-bold text-sm">
+                    <span>{{ message }}</span>
+                    <button @click="show = false" class="ml-4 text-xl">&times;</button>
+                </div>
+            {% endfor %}
+        {% endif %}
     </div>
 
-    <nav class="bg-white dark:bg-slate-800 shadow-sm px-6 py-4 flex justify-between items-center border-b dark:border-slate-700">
-        <h1 class="text-xl font-bold text-blue-600 dark:text-blue-400">InvoiceExtractor</h1>
-        <div class="flex items-center gap-4">
-            <button @click="darkMode = !darkMode; localStorage.setItem('dark', darkMode)" 
-                    class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition">
+    <nav class="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl sticky top-0 z-40 px-8 py-5 flex justify-between items-center border-b dark:border-slate-700 shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl italic shadow-lg shadow-blue-600/30">iP</div>
+            <h1 class="text-xl font-black tracking-tighter uppercase">Invoice<span class="text-blue-600">Pro</span></h1>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <button @click="darkMode = !darkMode; localStorage.setItem('dark', darkMode)" class="p-2.5 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:ring-2 ring-blue-500 transition-all">
                 <template x-if="!darkMode">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                    <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
                 </template>
                 <template x-if="darkMode">
-                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m3.343-5.657l-.707.707m12.728 12.728l-.707.707M6.343 17.657l-.707-.707M17.657 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"></path></svg>
+                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 9H3m3.343-5.657l-.707.707m12.728 12.728l-.707.707M6.343 17.657l-.707-.707M17.657 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z"></path></svg>
                 </template>
             </button>
-            <a href="{% url 'logout' %}" class="text-sm text-red-500 font-medium">Déconnexion</a>
+            <a href="{% url 'logout' %}" class="px-5 py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-black rounded-xl hover:bg-red-600 hover:text-white transition-all uppercase tracking-widest">Sortir</a>
         </div>
     </nav>
 
-    <main class="p-8">
+    <main class="p-8 max-w-7xl mx-auto">
         {% block content %}{% endblock %}
     </main>
+
+    <footer class="mt-20 p-12 text-center text-slate-400 text-[9px] font-black uppercase tracking-[0.2em] opacity-50">
+        Engineered with AI &bull; InvoicePro &copy; 2026
+    </footer>
 
 </body>
 </html>

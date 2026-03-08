@@ -13,6 +13,9 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = []
 
+# --- CORRECTION POUR L'APERÇU PDF/IMAGE ---
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -20,7 +23,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'extractor', # Ton application
+    'extractor', 
 ]
 
 MIDDLEWARE = [
@@ -35,11 +38,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'invoice_project.urls'
 
-# CONFIGURATION DES TEMPLATES (Fusionnée et propre)
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # On dit à Django de regarder d'abord dans le dossier global 'templates' à la racine
         'DIRS': [BASE_DIR / 'templates'], 
         'APP_DIRS': True,
         'OPTIONS': {
@@ -82,12 +83,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Redirection après Login/Logout
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
-# CONFIGURATION DES EMAILS
-# En développement, les emails s'affichent dans le terminal
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_SUBJECT_PREFIX = ""
 DEFAULT_FROM_EMAIL = "FactureAI <noreply@factureai.pro>"

@@ -2,97 +2,93 @@
 
 {% block content %}
 <div x-data="{ 
+    showSplitView: false,
     loading: false,
-    filterSearch: '',
-    editingId: null,
-    editingField: null,
-    filterRow(supplier) { return supplier.toLowerCase().includes(this.filterSearch.toLowerCase()); },
-    async saveField(id, field, value) {
-        const response = await fetch('{% url 'update_invoice_field' %}', {
+    editingInvoice: { id: null, supplier: '', items: [], total_ttc: 0, currency: 'EUR', preview_url: '' },
+    
+    openSplitView(invoice, items) {
+        this.editingInvoice = { ...invoice, items: items };
+        this.editingInvoice.preview_url = `/serve-pdf/${invoice.id}/`;
+        this.showSplitView = true;
+    },
+
+    async save() {
+        this.loading = true;
+        await fetch('/update-invoice-full/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: id, field: field, value: value })
+            body: JSON.stringify(this.editingInvoice)
         });
-        if (response.ok) { this.editingId = null; this.editingField = null; location.reload(); }
+        window.location.reload();
     }
-}" class="max-w-6xl mx-auto space-y-8">
+}" class="max-w-7xl mx-auto p-6">
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
-            <div class="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl font-bold">€</div>
-            <div><p class="text-xs font-bold text-gray-400 uppercase">Total Mensuel</p><p class="text-2xl font-black">{{ total_month|floatformat:2 }} €</p></div>
-        </div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
-            <div class="p-3 bg-green-100 dark:bg-green-900/30 text-green-600 rounded-xl font-bold">%</div>
-            <div><p class="text-xs font-bold text-gray-400 uppercase">TVA à récupérer</p><p class="text-2xl font-black">{{ tva_month|floatformat:2 }} €</p></div>
-        </div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border dark:border-slate-700 flex items-center gap-4">
-            <div class="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-xl font-bold">#</div>
-            <div><p class="text-xs font-bold text-gray-400 uppercase">Documents</p><p class="text-2xl font-black">{{ count_month }}</p></div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700">
-            <input type="text" x-model="filterSearch" placeholder="Rechercher un fournisseur..." class="w-full p-3 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-xl outline-none">
-        </div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700">
-            <form action="{% url 'upload_invoice' %}" method="POST" enctype="multipart/form-data" @submit="loading = true" class="flex gap-2">
-                {% csrf_token %}
-                <input type="file" name="pdf_file" required class="flex-1 text-xs">
-                <button type="submit" :disabled="loading" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold">
-                    <span x-show="!loading">Analyser</span>
-                    <span x-show="loading" class="animate-pulse">Analyse...</span>
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 h-64"><canvas id="monthlyChart"></canvas></div>
-        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border dark:border-slate-700 h-64"><canvas id="supplierChart"></canvas></div>
-    </div>
-
-    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border dark:border-slate-700 overflow-hidden">
-        <div class="p-4 bg-gray-50 dark:bg-slate-900/50 border-b dark:border-slate-700 flex justify-between items-center">
-            <h3 class="text-xs font-bold uppercase text-gray-400 tracking-widest text-blue-600">Liste des factures</h3>
-            <form action="{% url 'export_excel' %}" method="GET" class="flex gap-2">
-                <input type="date" name="start_date" class="text-[10px] p-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded">
-                <input type="date" name="end_date" class="text-[10px] p-1 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded">
-                <button type="submit" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold">EXPORTER</button>
-            </form>
-        </div>
+    <div class="bg-white rounded-3xl shadow-xl overflow-hidden border">
         <table class="w-full text-left">
-            <thead class="bg-gray-50 dark:bg-slate-900/50 text-gray-500 text-[10px] uppercase font-bold">
-                <tr><th class="p-4">Fournisseur</th><th class="p-4">Date</th><th class="p-4 text-right">Montant</th><th class="p-4 text-center">Action</th></tr>
+            <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
+                <tr><th class="p-6">Fournisseur</th><th class="p-6 text-right">Total</th></tr>
             </thead>
-            <tbody class="divide-y dark:divide-slate-700">
+            <tbody class="divide-y">
                 {% for invoice in invoices %}
-                <tr x-show="filterRow('{{ invoice.supplier|escapejs }}')" class="hover:bg-gray-50 dark:hover:bg-slate-700/30 transition group">
-                    <td class="p-4">
-                        <div @dblclick="editingId = {{ invoice.id }}; editingField = 'supplier'">
-                            <span x-show="editingId !== {{ invoice.id }} || editingField !== 'supplier'" class="font-bold">{{ invoice.supplier }}</span>
-                            <input x-show="editingId === {{ invoice.id }} && editingField === 'supplier'" type="text" value="{{ invoice.supplier }}" @keyup.enter="saveField({{ invoice.id }}, 'supplier', $event.target.value)" class="bg-white dark:bg-slate-900 border border-blue-500 rounded px-2 py-1 text-sm w-full outline-none">
-                        </div>
-                    </td>
-                    <td class="p-4 text-sm opacity-60">{{ invoice.date|date:"d/m/Y" }}</td>
-                    <td class="p-4 text-right font-mono font-bold text-blue-600">{{ invoice.total_ttc }} {{ invoice.currency }}</td>
-                    <td class="p-4 flex justify-center gap-2">
-                        <a href="{{ invoice.pdf_file.url }}" target="_blank" class="p-1 hover:text-blue-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></a>
-                        <a href="{% url 'delete_invoice' invoice.id %}" class="p-1 hover:text-red-500 transition opacity-0 group-hover:opacity-100" onclick="return confirm('Supprimer ?')"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></a>
-                    </td>
+                <tr class="hover:bg-blue-50 cursor-pointer"
+                    @click="openSplitView({
+                        id: {{ invoice.id }},
+                        supplier: '{{ invoice.supplier|escapejs }}',
+                        total_ttc: '{{ invoice.total_ttc }}',
+                        currency: '{{ invoice.currency }}'
+                    }, [
+                        {% for item in invoice.items.all %}
+                        { description: '{{ item.description|escapejs }}', quantity: {{ item.quantity }}, price_unit: {{ item.price_unit }} },
+                        {% endfor %}
+                    ])">
+                    <td class="p-6 font-bold">{{ invoice.supplier }}</td>
+                    <td class="p-6 text-right font-black text-blue-600">{{ invoice.total_ttc }} {{ invoice.currency }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-    new Chart(monthlyCtx, { type: 'line', data: { labels: {{ monthly_labels|safe }}, datasets: [{ label: 'Dépenses', data: {{ monthly_totals|safe }}, borderColor: '#2563eb', tension: 0.3 }] }, options: { responsive: true, maintainAspectRatio: false } });
-    const supplierCtx = document.getElementById('supplierChart').getContext('2d');
-    new Chart(supplierCtx, { type: 'doughnut', data: { labels: {{ supplier_labels|safe }}, datasets: [{ data: {{ supplier_totals|safe }}, backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }] }, options: { responsive: true, maintainAspectRatio: false } });
-</script>
+    <template x-if="showSplitView">
+        <div class="fixed inset-0 z-[100] flex bg-slate-900/90 backdrop-blur-sm">
+            <div class="flex-1">
+                <iframe :src="editingInvoice.preview_url" class="w-full h-full border-none"></iframe>
+            </div>
+            
+            <div class="w-[500px] bg-white h-full p-8 flex flex-col">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-xl font-bold uppercase text-blue-600 tracking-tighter">Révision Facture</h2>
+                    <button @click="showSplitView = false" class="text-slate-400 text-2xl">✕</button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto space-y-4">
+                    <label class="text-[10px] font-black uppercase text-slate-400">Fournisseur</label>
+                    <input type="text" x-model="editingInvoice.supplier" class="w-full p-4 bg-slate-100 rounded-2xl border-none font-bold mb-6">
+                    
+                    <h3 class="text-xs font-black uppercase text-slate-500 border-b pb-2">Articles détaillés</h3>
+                    <template x-for="(item, index) in editingInvoice.items" :key="index">
+                        <div class="p-4 border rounded-2xl space-y-2">
+                            <input type="text" x-model="item.description" class="w-full font-bold text-sm outline-none">
+                            <div class="flex gap-4">
+                                <input type="number" x-model="item.quantity" class="w-16 p-2 bg-slate-50 rounded-lg text-xs">
+                                <input type="number" x-model="item.price_unit" class="flex-1 p-2 bg-slate-50 rounded-lg text-xs">
+                                <span class="font-bold text-blue-600 text-sm" x-text="(item.quantity * item.price_unit).toFixed(2)"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="pt-8 border-t">
+                    <div class="flex justify-between mb-6 font-black text-2xl uppercase italic">
+                        <span>Total TTC</span>
+                        <span class="text-blue-600" x-text="editingInvoice.total_ttc + ' ' + editingInvoice.currency"></span>
+                    </div>
+                    <button @click="save()" class="w-full bg-blue-600 text-white py-5 rounded-3xl font-black uppercase shadow-xl hover:scale-105 transition-all">
+                        Enregistrer les modifications
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
 {% endblock %}
